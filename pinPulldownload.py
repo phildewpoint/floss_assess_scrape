@@ -1,8 +1,11 @@
 # this app takes a return delimited file (like a column from an Excel spreadsheet) and parses apart all of the
 # related information from the cook county assessor's office
 
-import bs4, requests, csv
+import bs4, requests, csv, selenium, re
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # set all starting variables based on cook county site makeup
 url = 'http://www.cookcountyassessor.com/Search/Property-Search.aspx'
@@ -44,20 +47,39 @@ property_char = {
     'Building Square Footage': 'ctl00_phArticle_ctlPropertyDetails_lblPropCharBldgSqFt',
     'Assessment Pass': 'ctl00_phArticle_ctlPropertyDetails_lblPropCharAsmtPass'
 }
-neighborhood_select = "ctl00_phArticle_ctlPropertySearch_ctlNeighborhoodSearch_ddlNeighborhood"
-
 
 def main():
     # create driver object, get the URL
-    driver = webdriver.Chrome()
-    driver.implicitly_wait(time_to_wait=15)
+    driver = selenium.webdriver.Chrome()
     driver.get(url)
-    
-    enter_menu = driver.find_element_by_link_text("Neighborhood Search")
-    enter_menu.click()
-    driver.execute_script("document.getElementById('ctl00_phArticle_ctlPropertySearch_ctlNeighborhoodSearch_ddlTownship').value = 32;")
-    print("Checkpoint 1")
+    pinList = []
+    next_page = 1
+    i = 1
+    # checks to make sure the page is correct, if so continues, if not quits
+    while (next_page != "") or (i < 20):
+        try:
+            element = WebDriverWait(driver, 60).until(
+                EC.presence_of_element_located((By.ID,"ctl00_phArticle_ctlPropertySearch_ctlSearchResults_pnlAppealSearchResults"))
+            )
+            next_page = driver.find_element_by_link_text("Next")
+        except:
+            print("Unable to find element")
+            driver.quit()
 
+        # b4s grabs all PINs, sets them in PIN list
+        soup = bs4.BeautifulSoup(markup=driver.page_source, features='html.parser')
+        for link in soup.find_all(href=re.compile("Property.aspx?")):
+            pinList.append(link.text)
+
+        # selenium goes to next page
+        i+ = 1
+        try:
+            next_page.click()
+        except:
+            print("No next page, quitting")
+            driver.quit()
+            quit()
+    quit()
 
     # # pull listing of pins from the file
     # pinList = open('pinListing', mode='r').read()
